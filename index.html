@@ -732,5 +732,9 @@ const feedbackBeforeClosingHistory=deepFeedback;deepFeedback=function(n){let htm
 const validateBeforeHistoryClosing=validateDeepConfig;validateDeepConfig=function(d){const err=validateBeforeHistoryClosing(d);if(err)return err;for(const n of [1,2])if(d['d'+n+'Task4Sent']==='true'&&d['d'+n+'Task4Pending']==='true')return '第'+n+'课收尾不能同时为已发送和待补发';return ''};
 const detailBeforeDeepLabels=sceneDetail;sceneDetail=function(id){const s=getScene(id);if(!s.deepChatConfig)return detailBeforeDeepLabels(id);const d=s.deepChatConfig;modal(s.name,'业务场景设置 · '+s.agentVersion,'<section class="choice"><h3>初始用户状态</h3><div class="two">'+Object.entries(d).filter(([k])=>k!=='preset').map(([k,v])=>'<div class="field"><label>'+esc(deepFieldLabels[k]||k)+'</label><strong>'+esc(v==='true'?'是':v==='false'?'否':v)+'</strong></div>').join('')+'</div>'+(Object.keys(d).length?'':'<p class="muted">未指定固定状态</p>')+'</section><details class="choice"><summary>查看底层配置映射</summary><pre style="white-space:pre-wrap">'+esc(JSON.stringify(d,null,2))+'</pre></details><details class="choice"><summary>代码资产</summary><p class="muted">当前为状态配置演示，尚未绑定真实太极代码快照。</p></details>','<button onclick="closeModal()">关闭</button><button class="primary" onclick="sceneEditor(\''+id+'\');sceneWizard.step=2;renderSceneWizard()">编辑业务场景</button>')};
 
+
+const removedCreationBranches=new Set(['knowledge-accuracy','meal-accuracy','handoff-accuracy']);
+const lifecycleBeforeRemoveBranches=lifecycleTemplates;lifecycleTemplates=function(){return lifecycleBeforeRemoveBranches().filter(t=>!removedCreationBranches.has(t.id))};
+const wizardBeforeRemoveBranches=availableWizardTemplates;availableWizardTemplates=function(){return wizardBeforeRemoveBranches().filter(t=>!removedCreationBranches.has(t.id))};
 render();
 </script></body></html>
