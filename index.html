@@ -836,7 +836,7 @@ stateModePanel=function(){return ''};
 stateMode=function(){return 'manual'};
 const wizardBeforeDirectStates=renderSceneWizard;renderSceneWizard=function(){if(sceneWizard){sceneWizard.stateMode='manual';sceneWizard.enabled=true}return wizardBeforeDirectStates()};
 const deepBodyBeforeDirectStates=deepStateBody;deepStateBody=function(){sceneWizard.enabled=true;let html=deepBodyBeforeDirectStates();return html.replace(/<label class="choice"><input type="checkbox"[^>]*> 为本场景配置初始状态<\/label>/,'')};
-const genericRenderBeforeDirectStates=wizardRenderBeforeThreeModes;
+
 const d1BodyBeforeDirectStates=d1StateBody;d1StateBody=function(){const html=d1BodyBeforeDirectStates();return html.replace(/<div class="field"><label>快速填入一组学习记录（可选）<\/label><select[\s\S]*?<\/select><small class="muted">[\s\S]*?<\/small><\/div>/,'').replace(/<h3>核心用户状态 <span class="tag">[^<]*<\/span><\/h3>/,'<h3>关键用户状态</h3>')};
 render();
 </script></body></html>
