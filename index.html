@@ -838,5 +838,13 @@ const wizardBeforeDirectStates=renderSceneWizard;renderSceneWizard=function(){if
 const deepBodyBeforeDirectStates=deepStateBody;deepStateBody=function(){sceneWizard.enabled=true;let html=deepBodyBeforeDirectStates();return html.replace(/<label class="choice"><input type="checkbox"[^>]*> 为本场景配置初始状态<\/label>/,'')};
 
 const d1BodyBeforeDirectStates=d1StateBody;d1StateBody=function(){const html=d1BodyBeforeDirectStates();return html.replace(/<div class="field"><label>快速填入一组学习记录（可选）<\/label><select[\s\S]*?<\/select><small class="muted">[\s\S]*?<\/small><\/div>/,'').replace(/<h3>核心用户状态 <span class="tag">[^<]*<\/span><\/h3>/,'<h3>关键用户状态</h3>')};
+
+// The global registry is a catalogue, not every scene's editable schema.
+function d1AllowedStateKeys(){const t=wizardTemplate(),r=d1Rule();const shared=['campDay','coursePeriod','latestClassNo','latestClassAttendStatus','latestClassWatchPercent','latestClassFinished','userTags','userGender','userAgeStage','painPoint','optOut'];if(t.taskId==='d1-return'||t.taskId==='d1-review')return [...shared,'cannotAttend'];if(t.taskId==='d1-feeling')return [...shared,'d1FeedbackType','d1FeedbackTendency','d1FeedbackText','d1FollowUpRounds','d1Task4Sent','d1Task4Pending'];if(t.taskId==='d1-homework')return [...shared,'d1FeedbackType','d1FeedbackTendency','d1FeedbackText'];return shared}
+d1Additional=function(){const keys=new Set(d1Rule().core),allowed=new Set(d1AllowedStateKeys()),query=(sceneWizard.d1Search||'').toLowerCase();return taijiStateRegistry.filter(f=>allowed.has(f.key)&&!keys.has(f.key)&&!sceneWizard.d1Added.includes(f.key)&&(f.label+' '+f.key).toLowerCase().includes(query)).map(f=>'<button class="choice" style="width:100%;text-align:left;padding:10px" onclick="d1Add(\''+f.key+'\')">＋ '+esc(f.label)+' <small class="muted">'+esc(f.key)+'</small></button>').join('')||'<p class="muted">没有可添加的匹配项</p>'};
+const d1AddBeforeScope=d1Add;d1Add=function(k){if(!d1AllowedStateKeys().includes(k))return notice('该配置不属于当前场景');return d1AddBeforeScope(k)};
+const d1InitBeforeScope=d1Init;d1Init=function(){d1InitBeforeScope();const allowed=new Set(d1AllowedStateKeys());sceneWizard.d1Added=sceneWizard.d1Added.filter(k=>allowed.has(k));for(const k of Object.keys(sceneWizard.d1Values))if(!allowed.has(k))delete sceneWizard.d1Values[k]};
+const d1BodyBeforeScope=d1StateBody;d1StateBody=function(){return d1BodyBeforeScope().replace('添加其他状态 · 完整37项可查','添加本场景其他状态').replace('按需添加到上方配置，未添加的字段保留快照，不自动重置。未来课次、旧字段仅建议用于专项测试。','仅列出当前任务可用的状态；其他课次、其他任务及旧版字段不提供配置。未指定的相关字段沿用快照原值。')};
+const d1SetBeforeScope=d1Set;d1Set=function(k,v){if(!d1AllowedStateKeys().includes(k))return notice('该配置不属于当前场景');return d1SetBeforeScope(k,v)};
 render();
 </script></body></html>
