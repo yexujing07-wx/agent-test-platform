@@ -1036,5 +1036,20 @@ for(const b of iceReplyBranches){const t={id:'taiji-task-intake-ice-'+b.key,busi
 const workspaceBeforeIceBranches=taijiWorkspace;taijiWorkspace=function(){const w=workspaceBeforeIceBranches();for(const s of w.scenes)if(iceReplyBranches.some(b=>s.templateId==='taiji-task-intake-ice-'+b.key))s.id=s.templateId+'-scene';return w};
 const cardsBeforeIceBranches=taijiStateCards;taijiStateCards=function(t){const cards=cardsBeforeIceBranches(t);if(!t.iceBranch)return cards;return cards.map(c=>({...c,name:t.name+' · '+c.name,values:{...c.values,route:t.iceBranch==='positive'?'承接明确诉求，提取有效痛点并按规则完成破冰':'尚未明确诉求，结合已执行轮次继续引导；达到上限后结束'}}))};
 const editorBeforeIceBranches=selectedStateCardEditor;selectedStateCardEditor=function(){const html=editorBeforeIceBranches(),t=wizardTemplate();return t.iceBranch?'<div class="notice"><strong>'+esc(t.name)+'</strong><p>'+esc(t.note)+'</p><small>分支由测试用例中的本轮用户回复触发；初始状态仍为未破冰，不提前写入本轮识别结果。</small></div>'+html:html};
+
+const iceFollowSpecs=[
+['positive-pain','positive','有痛点','识别本人明确痛点，结合痛点回应；本轮提取后再回写痛点与破冰完成标签。'],
+['positive-general','positive','无痛点的泛需求','如兴趣爱好、随便学学、强身健体；不误打具体痛点标签。'],
+['positive-probe','positive-general','二次深挖痛点','承接泛需求，再了解具体改善诉求；避免把泛泛学习愿望当成身体痛点。'],
+['unclear-follow','unclear','正面承接＋表情包追问一轮','承接年龄、既往疗法等信息，继续询问学习诉求。'],
+['unclear-to-positive','unclear-follow','追问后：正面回复学习诉求','追问后已明确学习诉求，后续按有痛点或泛需求判断。'],
+['unclear-still','unclear-follow','追问后：仍未正面回复学习诉求','沿用已确认年龄、性别继续服务；未明确痛点不得编造痛点，后续受破冰次数上限约束。']
+];
+for(const [key,parent,name,note]of iceFollowSpecs){const t={id:'taiji-task-intake-ice-'+key,business:'Taiji',taskId:'intake-ice',parentTask:'intake-ice',hierarchyParent:'taiji-task-intake-ice-'+parent,iceBranch:key,name,note,phase:'接量期',day:'',kind:'场景回复测试',subtype:'多轮场景回复测试',roundMode:'多轮次',fields:[]};taijiTemplates.push(t);sceneTemplates.push(t)}
+function iceTreeNode(t,depth=0){const children=taijiTemplates.filter(x=>x.hierarchyParent===t.id||(!x.hierarchyParent&&x.parentTask===t.taskId&&!t.parentTask));return '<div style="margin:6px 0">'+(depth?'<button class="lifecycle-node" style="font-size:12px;margin:5px 0" onclick="createFromLifecycle(\''+t.id+'\')">'+esc(t.name)+'</button>':lifecycleNode(t))+(children.length?'<div style="border-left:2px solid #cddafe;margin-left:10px;padding-left:10px">'+children.map(x=>iceTreeNode(x,depth+1)).join('')+'</div>':'')+'</div>'}
+const taskNodeBeforeIceTree=taijiTaskNode;taijiTaskNode=function(t){return t.taskId==='intake-ice'&&!t.parentTask?iceTreeNode(t):taskNodeBeforeIceTree(t)};
+const workspaceBeforeIceFollow=taijiWorkspace;taijiWorkspace=function(){const w=workspaceBeforeIceFollow();for(const s of w.scenes){const t=taijiTemplates.find(t=>t.id===s.templateId);if(t?.iceBranch)s.id=t.id+'-scene'}return w};
+const cardsBeforeIceFollow=taijiStateCards;taijiStateCards=function(t){const rows=cardsBeforeIceFollow(t);if(!t.hierarchyParent)return rows;const follow=t.iceBranch.includes('unclear-')||t.iceBranch==='positive-probe';return rows.filter(c=>!follow||c.values.iceRuns>=1).map(c=>({...c,name:t.name+' · 已执行'+c.values.iceRuns+'轮',values:{...c.values,route:t.note,...(follow?{historyMessages:t.iceBranch.startsWith('unclear')?'老师：您这次学习最想改善哪方面？\n学员：我今年60岁。\n老师：了解了，除了年龄，您希望通过学习改善什么呢？':'老师：您想通过学习改善哪方面？\n学员：就是想学学、强身健体。'}:{})}}))};
+const editorBeforeIceFollow=selectedStateCardEditor;selectedStateCardEditor=function(){const html=editorBeforeIceFollow(),t=wizardTemplate();if(!t.hierarchyParent||!sceneWizard.cardValues)return html;return html+'<details class="choice"><summary>前序对话上下文</summary><p class="muted">分支取决于本轮测试语句；以下历史只描述前序交互，不提前写入本轮识别结果。</p><textarea oninput="sceneWizard.cardValues.historyMessages=this.value">'+esc(sceneWizard.cardValues.historyMessages||'')+'</textarea></details>'};
 render();
 </script></body></html>
