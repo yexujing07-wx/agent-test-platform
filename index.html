@@ -846,5 +846,38 @@ const d1AddBeforeScope=d1Add;d1Add=function(k){if(!d1AllowedStateKeys().includes
 const d1InitBeforeScope=d1Init;d1Init=function(){d1InitBeforeScope();const allowed=new Set(d1AllowedStateKeys());sceneWizard.d1Added=sceneWizard.d1Added.filter(k=>allowed.has(k));for(const k of Object.keys(sceneWizard.d1Values))if(!allowed.has(k))delete sceneWizard.d1Values[k]};
 const d1BodyBeforeScope=d1StateBody;d1StateBody=function(){return d1BodyBeforeScope().replace('添加其他状态 · 完整37项可查','添加本场景其他状态').replace('按需添加到上方配置，未添加的字段保留快照，不自动重置。未来课次、旧字段仅建议用于专项测试。','仅列出当前任务可用的状态；其他课次、其他任务及旧版字段不提供配置。未指定的相关字段沿用快照原值。')};
 const d1SetBeforeScope=d1Set;d1Set=function(k,v){if(!d1AllowedStateKeys().includes(k))return notice('该配置不属于当前场景');return d1SetBeforeScope(k,v)};
+
+const taijiTagGroups=[
+{id:'pain',name:'太极AI痛点标签2.0',source:'聊天识别',tags:['#肩颈问题','#腰椎脊柱问题','#腰膝关节问题','#腿部循环障碍','#气血津液问题','#肝肾不足精血问题','#脾胃问题','#心肺功能失衡','#三高','#结节与囊肿','#癌症','#术后康复','#睡眠问题','#情绪问题','#免疫力低下','#肥胖','#亚健康预防','#正宗']},
+{id:'absent',name:'太极不能到课原因',source:'聊天识别',tags:[1,2,3].flatMap(n=>['#D'+n+'主观没时间','#D'+n+'客观没时间','#D'+n+'不能到课无原因'])},
+{id:'foundation',name:'太极学习基础',source:'聊天识别',tags:['#零基础','#有基础'],single:true},
+{id:'risk',name:'AI转人工意图识别',source:'聊天识别',tags:['#严重病症']},
+{id:'feeling',name:'太极课后感受',source:'聊天识别',tags:[1,2,3].flatMap(n=>['#D'+n+'负向体感','#D'+n+'正向体感','#D'+n+'中性体感'])},
+{id:'completion',name:'太极主观完课',source:'聊天识别',tags:[0,1,2,3].map(n=>'#D'+n+'主观完课')},
+{id:'ice',name:'是否AI已破冰',source:'系统自动',tags:['#AI已破冰']},
+{id:'checkin',name:'打卡行为',source:'系统自动',tags:[1,2,3].map(n=>'#课'+n+'已打卡(普通)')},
+{id:'reply',name:'太极课后回复',source:'系统自动',tags:['#D1课后已回复','#D4课后已回复']},
+{id:'keyword',name:'太极口令回复',source:'系统自动',tags:[1,2,3].map(n=>'#D'+n+'已回复口令')},
+{id:'iceExecuted',name:'太极破冰任务执行',source:'系统自动',tags:['#破冰任务已执行']}
+];
+function d1SceneTagGroups(){const task=wizardTemplate().taskId;const groupIds={
+'d1-return':['absent','completion','reply'],
+'d1-review':['absent','completion','checkin','reply'],
+'d1-feeling':['pain','risk','feeling','completion','checkin','reply'],
+'d1-homework':['pain','foundation','feeling','checkin','keyword'],
+'d1-next':['absent','feeling','completion','checkin','keyword']
+}[task]||[];return taijiTagGroups.filter(g=>groupIds.includes(g.id)).map(g=>({...g,tags:g.tags.filter(tag=>{if(g.id==='absent')return tag.startsWith(task==='d1-next'?'#D2':'#D1');if(['feeling','completion','reply','keyword'].includes(g.id))return tag.startsWith('#D1');if(g.id==='checkin')return tag.startsWith('#课1');return true})})).filter(g=>g.tags.length)}
+function d1SelectedTags(){return sceneWizard.d1Values.userTags||[]}
+function d1TagSet(tag,on){const group=taijiTagGroups.find(g=>g.tags.includes(tag));let tags=[...d1SelectedTags()];if(!group||!d1SceneTagGroups().some(g=>g.tags.includes(tag)))return;if(group.source==='系统自动')return;const remove=on&&group.single?group.tags:on&&group.id==='feeling'?group.tags.filter(x=>x.slice(0,3)===tag.slice(0,3)):[];tags=tags.filter(x=>x!==tag&&!remove.includes(x));if(on)tags.push(tag);sceneWizard.d1Values.userTags=[...new Set(tags)];sceneWizard.d1TagDerived??=[];const pain=taijiTagGroups.find(g=>g.id==='pain').tags;if(on&&pain.includes(tag)&&!tags.includes('#AI已破冰')){tags.push('#AI已破冰');sceneWizard.d1TagDerived.push('#AI已破冰')}if(group.id==='feeling'){const check='#课1已打卡(普通)';if(tags.some(x=>x.startsWith('#D1')&&x.endsWith('体感'))){if(!tags.includes(check)){tags.push(check);sceneWizard.d1TagDerived.push(check)}}else if(sceneWizard.d1TagDerived.includes(check))tags=tags.filter(x=>x!==check)}if(!tags.some(x=>pain.includes(x))&&sceneWizard.d1TagDerived.includes('#AI已破冰'))tags=tags.filter(x=>x!=='#AI已破冰');sceneWizard.d1Values.userTags=[...new Set(tags)];renderSceneWizard()}
+function d1TagPicker(){const selected=d1SelectedTags(),groups=d1SceneTagGroups();return '<div class="field" style="grid-column:1/-1"><label>本场景关联标签</label><details><summary>展开标签 · '+groups.reduce((n,g)=>n+g.tags.length,0)+'项关联标签 · 已选'+selected.length+'项</summary>'+groups.map(g=>'<details><summary>'+esc(g.name)+' <span class="tag">'+g.source+'</span></summary>'+g.tags.map(tag=>g.source==='系统自动'?'<p class="muted">'+(selected.includes(tag)?'✓ ':'○ ')+esc(tag)+' <small>由业务规则产生，不手工打标</small></p>':'<label style="display:inline-flex;gap:5px;margin:6px 12px 6px 0"><input type="checkbox" '+(selected.includes(tag)?'checked':'')+' onchange="d1TagSet(\''+tag+'\',this.checked)"> '+esc(tag)+'</label>').join('')+'</details>').join('')+'<p class="muted">标签配置为测试入口的历史标签。痛点仅本人明确问题或诉求；严重病症可涉及本人或家人；主观完课仅第二次自述后打标。感受识别窗口：D1 21:04至D2 19:28，其他时间需按真实业务时钟核验。</p></details></div>'}
+const d1FieldBeforeTags=d1Field;d1Field=function(k,extra){return k==='userTags'?d1TagPicker():d1FieldBeforeTags(k,extra)};
+function d1TopSummary(){const d=sceneWizard.d1Values,keys=Object.keys(d).filter(k=>!['campDay','coursePeriod','userTags'].includes(k)&&d[k]!==''),tags=d.userTags||[];return '<h3>已配置用户状态</h3><p class="muted">Day1 · 课后 · '+esc(wizardTemplate().name)+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+keys.map(k=>'<span class="tag">'+esc(taijiStateRegistry.find(f=>f.key===k)?.label||k)+'：'+esc(Array.isArray(d[k])?d[k].join('、'):d[k]===true?'是':d[k]===false?'否':d[k])+'</span>').join('')+tags.map(tag=>'<span class="tag" style="background:#e1f5ee;color:#16715b">'+esc(tag)+'</span>').join('')+'</div>'+(!keys.length&&!tags.length?'<p class="muted">尚未选择，配置后自动显示在这里。</p>':'')}
+const d1BodyBeforeTagSummary=d1StateBody;d1StateBody=function(){let html=d1BodyBeforeTagSummary();return html.replace('<h2>用户状态</h2>','<h2>用户状态</h2><section class="choice" id="d1SelectedStateSummary" style="background:#f3f7ff;border-color:#cfdaef">'+d1TopSummary()+'</section>')};
+const refreshBeforeTagSummary=d1RefreshSummary;d1RefreshSummary=function(){refreshBeforeTagSummary();const el=document.querySelector('#d1SelectedStateSummary');if(el)el.innerHTML=d1TopSummary()};
+const toggleBeforeTagSummary=d1Toggle;d1Toggle=function(k,x,on){toggleBeforeTagSummary(k,x,on);d1RefreshSummary()};
+const initBeforeTagScope=d1Init;d1Init=function(){initBeforeTagScope();const allowed=new Set(d1SceneTagGroups().flatMap(g=>g.tags));if(d1SceneTagGroups().some(g=>g.id==='pain'))allowed.add('#AI已破冰');sceneWizard.d1Values.userTags=(sceneWizard.d1Values.userTags||[]).filter(tag=>allowed.has(tag))};
+const validateBeforeTagScope=d1Validate;d1Validate=function(){const tags=d1SelectedTags();if(tags.filter(t=>['#零基础','#有基础'].includes(t)).length>1)return '学习基础只能保留最新一个标签';if(tags.filter(t=>/^#D1[负正中]向?性?体感$/.test(t)).length>1)return '第一课感受只保留一个标签，优先级负向、正向、中性';return validateBeforeTagScope()};
+
+const tagSetBeforePriority=d1TagSet;d1TagSet=function(tag,on){if(on&&/^#D1[负正中]/.test(tag)){const rank=t=>t.includes('负向')?3:t.includes('正向')?2:1;const prior=d1SelectedTags().find(t=>/^#D1[负正中]/.test(t));if(prior&&rank(prior)>rank(tag)){notice('同课感受按负向 > 正向 > 中性保留。需构造其他历史初态时，请先取消原标签。');renderSceneWizard();return}}return tagSetBeforePriority(tag,on)};
 render();
 </script></body></html>
